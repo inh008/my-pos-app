@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý bán hàng — Quét mã vạch</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a222d;
+      --border: #2d3a4a;
+      --text: #e7edf4;
+      --muted: #8b9cb3;
+      --accent: #3d9cf5;
+      --accent-dim: #2563a8;
+      --success: #34d399;
+      --danger: #f87171;
+      --radius: 10px;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(160deg, var(--bg) 0%, #151d28 100%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 1.25rem;
+    }
+    h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin: 0 0 0.25rem;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .panel h2 {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin: 0 0 0.75rem;
+      font-weight: 600;
+    }
+    #reader {
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 200px;
+      background: #0a0e12;
+    }
+    #reader video {
+      border-radius: 8px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+    .row.tight { margin-top: 0; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 0.55rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.15s, transform 0.1s;
+    }
+    button:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.06); }
+    .btn-success {
+      background: rgba(52, 211, 153, 0.2);
+      color: var(--success);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+    .btn-success:hover { background: rgba(52, 211, 153, 0.3); }
+    .btn-danger {
+      background: rgba(248, 113, 113, 0.15);
+      color: var(--danger);
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+    }
+    .btn-danger:hover { background: rgba(248, 113, 113, 0.25); }
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+    }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      max-width: 220px;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    textarea {
+      max-width: none;
+      min-height: 120px;
+      resize: vertical;
+      font-family: ui-monospace, monospace;
+      font-size: 0.85rem;
+    }
+    select {
+      max-width: 280px;
+      cursor: pointer;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.65rem;
+      align-items: end;
+      margin-bottom: 0.75rem;
+    }
+    .field { min-width: 0; }
+    .field input { max-width: none; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr.highlight {
+      background: rgba(61, 156, 245, 0.12);
+      animation: flash 1.2s ease;
+    }
+    @keyframes flash {
+      from { background: rgba(61, 156, 245, 0.28); }
+    }
+    .mono { font-family: ui-monospace, monospace; font-size: 0.85em; }
+    .toast {
+      position: fixed;
+      bottom: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.65rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 100;
+      max-width: 90vw;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    .empty {
+      color: var(--muted);
+      text-align: center;
+      padding: 1.5rem;
+    }
+    .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+    }
+    .total-bar {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .toolbar-split {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .toolbar-split .field { flex: 1; min-width: 160px; }
+    .toolbar-split .field input { max-width: 320px; }
+    @media print {
+      .no-print { display: none !important; }
+      body {
+        background: #fff;
+        color: #000;
+      }
+      #printHost {
+        display: block !important;
+        visibility: visible !important;
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        left: auto !important;
+      }
+      #printHost .print-invoice {
+        display: block !important;
+      }
+    }
+    #printHost {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 72mm;
+    }
+    .print-invoice {
+      max-width: 72mm;
+      margin: 0 auto;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .print-invoice h3 {
+      margin: 0 0 0.35rem;
+      font-size: 14px;
+      text-align: center;
+    }
+    .print-invoice .meta {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-size: 11px;
+    }
+    .print-invoice table {
+      width: 100%;
+      font-size: 11px;
+    }
+    .print-invoice th,
+    .print-invoice td {
+      border-bottom: 1px solid #ccc;
+      padding: 4px 2px;
+    }
+    .print-invoice .sum {
+      margin-top: 0.5rem;
+      text-align: right;
+      font-weight: 700;
+    }
+    .print-invoice .qr-wrap {
+      text-align: center;
+      margin-top: 8px;
+    }
+    .print-invoice .foot {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap no-print">
+    <h1>Quản lý bán hàng</h1>
+    <p class="sub">Quét mã vạch / QR hóa đơn nhập kho, giỏ bán lẻ, in hóa đơn. Dữ liệu lưu trên trình duyệt (localStorage).</p>
+
+    <section class="panel">
+      <div class="toolbar-split">
+        <div class="field">
+          <label for="inpShopName">Tên cửa hàng (in trên hóa đơn)</label>
+          <input id="inpShopName" type="text" placeholder="Cửa hàng của tôi" />
+        </div>
+        <div class="field">
+          <label for="selScanMode">Chế độ quét camera</label>
+          <select id="selScanMode">
+            <option value="product">Sản phẩm — điền form kho</option>
+            <option value="cart">Giỏ hàng — thêm 1 SP vào giỏ</option>
+            <option value="invoice">Hóa đơn nhập kho — chỉ QR (JSON nội bộ)</option>
+          </select>
+        </div>
+      </div>
+      <h2>Camera quét</h2>
+      <div id="reader"></div>
+      <div class="row">
+        <button type="button" class="btn-primary" id="btnCam">Bật camera quét</button>
+        <button type="button" class="btn-ghost" id="btnStop" disabled>Tắt camera</button>
+      </div>
+      <p class="hint">HTTPS hoặc localhost để dùng camera. Đổi &quot;Chế độ quét&quot; trước khi bật camera; đổi chế độ khi đang quét sẽ cần tắt rồi bật lại.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Giỏ hàng bán lẻ</h2>
+      <p class="hint" style="margin-top:0">Chọn chế độ &quot;Giỏ hàng&quot; rồi quét mã có trong danh sách hàng; hoặc dùng nút Thêm từ mã đang nhập ở form kho.</p>
+      <div class="row tight" style="margin-bottom:0.75rem">
+        <button type="button" class="btn-ghost" id="btnCartFromForm">Thêm vào giỏ từ form (mã + SL form)</button>
+        <button type="button" class="btn-ghost" id="btnCartClear">Xóa giỏ</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã</th>
+              <th>Tên</th>
+              <th>Đơn giá</th>
+              <th>SL</th>
+              <th>Tiền</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+      </div>
+      <div class="total-bar">
+        <span>Tổng cộng</span>
+        <span id="cartTotal">0 đ</span>
+      </div>
+      <div class="row">
+        <button type="button" class="btn-success" id="btnCheckout">Thanh toán (trừ tồn kho)</button>
+        <button type="button" class="btn-primary" id="btnPrintLast">In hóa đơn vừa bán</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Nhập kho từ hóa đơn</h2>
+      <p class="hint" style="margin-top:0">Dán danh sách: mỗi dòng <span class="mono">mã_vạch,số_lượng</span> hoặc cách bằng tab. Hoặc quét QR do ứng dụng tạo (xuất JSON / in hóa đơn nhập). Mã không có trong danh sách hàng sẽ bị bỏ qua.</p>
+      <label for="taInvoice">Nội dung / dòng mã</label>
+      <textarea id="taInvoice" placeholder="8934563123456,24&#10;8934563123457	12"></textarea>
+      <div class="row">
+        <button type="button" class="btn-primary" id="btnInvoiceApply">Cộng vào tồn kho</button>
+        <button type="button" class="btn-ghost" id="btnInvoiceFile">Chọn file JSON hóa đơn nhập</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Thêm / cập nhật hàng</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label for="inpBarcode">Mã vạch</label>
+          <input id="inpBarcode" type="text" inputmode="numeric" autocomplete="off" placeholder="Quét hoặc gõ mã" />
+        </div>
+        <div class="field">
+          <label for="inpName">Tên hàng</label>
+          <input id="inpName" type="text" placeholder="Ví dụ: Nước suối 500ml" />
+        </div>
+        <div class="field">
+          <label for="inpPrice">Giá (VNĐ)</label>
+          <input id="inpPrice" type="number" min="0" step="100" placeholder="15000" />
+        </div>
+        <div class="field">
+          <label for="inpQty">Số lượng</label>
+          <input id="inpQty" type="number" min="0" step="1" value="1" />
+        </div>
+      </div>
+      <div class="row">
+        <button type="button" class="btn-primary" id="btnAdd">Lưu vào danh sách</button>
+        <button type="button" class="btn-ghost" id="btnClearForm">Xóa form</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Danh sách hàng hóa</h2>
+      <div class="row" style="margin-bottom:0.75rem">
+        <button type="button" class="btn-ghost" id="btnExport">Xuất JSON kho</button>
+        <button type="button" class="btn-ghost" id="btnImport">Nhập JSON kho</button>
+        <button type="button" class="btn-ghost" id="btnExportInvoiceQr">Xuất JSON hóa đơn nhập (để in QR)</button>
+        <button type="button" class="btn-danger" id="btnClearAll">Xóa toàn bộ kho</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã vạch</th>
+              <th>Tên</th>
+              <th>Giá</th>
+              <th>SL</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="emptyMsg" hidden>Chưa có hàng. Quét mã hoặc nhập thủ công ở trên.</p>
+    </section>
+  </div>
+
+  <div class="toast no-print" id="toast" role="status"></div>
+  <input type="file" id="fileImport" accept="application/json" hidden />
+  <input type="file" id="fileInvoiceImport" accept="application/json" hidden />
+
+  <div id="printHost" aria-hidden="true"></div>
+
+  <script>
+    (function () {
+      const STORAGE_PRODUCTS = "banhang_products_v1";
+      const STORAGE_SETTINGS = "banhang_settings_v1";
+      const PREFIX_INV = "BANHANG:INV:";
+      const PREFIX_SALE = "BANHANG:SL:";
+
+      /** @type {{ barcode: string, name: string, price: number, qty: number }[]} */
+      let products = [];
+      /** @type {{ barcode: string, name: string, price: number, qty: number }[]} */
+      let cart = [];
+      /** @type {null | { id: string, at: string, shop: string, lines: { name: string, qty: number, price: number, lineTotal: number }[], total: number, qrData: string }} */
+      let lastSale = null;
+
+      const $ = (id) => document.getElementById(id);
+      const tbody = $("tbody");
+      const cartBody = $("cartBody");
+      const emptyMsg = $("emptyMsg");
+      const toastEl = $("toast");
+      const printHost = $("printHost");
+
+      let html5Qr = null;
+      let scanning = false;
+      let lastScan = "";
+      let lastScanAt = 0;
+      const SCAN_DEBOUNCE_MS = 700;
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_SETTINGS);
+          const o = raw ? JSON.parse(raw) : {};
+          $("inpShopName").value = o.shopName || "";
+        } catch {
+          $("inpShopName").value = "";
+        }
+      }
+
+      function saveSettings() {
+        localStorage.setItem(
+          STORAGE_SETTINGS,
+          JSON.stringify({ shopName: $("inpShopName").value.trim() })
+        );
+      }
+
+      function load() {
+        try {
+          const raw = localStorage.getItem(STORAGE_PRODUCTS);
+          products = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(products)) products = [];
+        } catch {
+          products = [];
+        }
+      }
+
+      function saveProducts() {
+        localStorage.setItem(STORAGE_PRODUCTS, JSON.stringify(products));
+        renderProducts();
+        renderCart();
+      }
+
+      function formatMoney(n) {
+        return Number(n).toLocaleString("vi-VN") + " đ";
+      }
+
+      function showToast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toastEl.classList.remove("show"), 2600);
+      }
+
+      function findProduct(barcode) {
+        return products.find((p) => p.barcode === barcode) || null;
+      }
+
+      function findIndex(barcode) {
+        return products.findIndex((p) => p.barcode === barcode);
+      }
+
+      function findCartIndex(barcode) {
+        return cart.findIndex((c) => c.barcode === barcode);
+      }
+
+      function highlightRow(barcode) {
+        const tr = tbody.querySelector(
+          'tr[data-bc="' + barcode.replace(/"/g, "") + '"]'
+        );
+        if (!tr) return;
+        tr.classList.remove("highlight");
+        void tr.offsetWidth;
+        tr.classList.add("highlight");
+      }
+
+      function escapeHtml(s) {
+        const d = document.createElement("div");
+        d.textContent = s;
+        return d.innerHTML;
+      }
+
+      function escapeAttr(s) {
+        return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+      }
+
+      function normalizeBarcode(text) {
+        return String(text || "").trim();
+      }
+
+      function getScanMode() {
+        return $("selScanMode").value;
+      }
+
+      function getFormatsForMode() {
+        if (typeof Html5QrcodeSupportedFormats === "undefined") return undefined;
+        const m = getScanMode();
+        if (m === "invoice") {
+          return [Html5QrcodeSupportedFormats.QR_CODE];
+        }
+        const base = [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.ITF,
+        ];
+        if (m === "cart") {
+          base.push(Html5QrcodeSupportedFormats.QR_CODE);
+        }
+        return base;
+      }
+
+      /** @returns {{ b: string, q: number }[] | null} */
+      function parseInvoicePayload(text) {
+        const t = String(text || "").trim();
+        if (!t) return null;
+        if (t.startsWith(PREFIX_INV)) {
+          try {
+            const j = JSON.parse(t.slice(PREFIX_INV.length));
+            if (j && j.type === "banhang_invoice" && Array.isArray(j.items)) {
+              const out = [];
+              for (const it of j.items) {
+                const b = normalizeBarcode(it.b != null ? it.b : it.barcode);
+                const q = parseInt(it.q != null ? it.q : it.qty, 10);
+                if (b && !isNaN(q) && q > 0) out.push({ b, q });
+              }
+              return out.length ? out : null;
+            }
+          } catch {
+            return null;
+          }
+        }
+        try {
+          const j = JSON.parse(t);
+          if (j && j.type === "banhang_invoice" && Array.isArray(j.items)) {
+            const out = [];
+            for (const it of j.items) {
+              const b = normalizeBarcode(it.b != null ? it.b : it.barcode);
+              const q = parseInt(it.q != null ? it.q : it.qty, 10);
+              if (b && !isNaN(q) && q > 0) out.push({ b, q });
+            }
+            return out.length ? out : null;
+          }
+        } catch {
+          /* ignore */
+        }
+        return null;
+      }
+
+      function parseLinesFromTextarea(text) {
+        const lines = String(text || "")
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter(Boolean);
+        const out = [];
+        for (const line of lines) {
+          const parts = line.split(/[\t,;]+/).map((s) => s.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            const b = normalizeBarcode(parts[0]);
+            const q = parseInt(parts[1], 10);
+            if (b && !isNaN(q) && q > 0) out.push({ b, q });
+          }
+        }
+        return out;
+      }
+
+      function applyInboundItems(items) {
+        let added = 0;
+        let skipped = 0;
+        const missing = [];
+        for (const { b, q } of items) {
+          const idx = findIndex(b);
+          if (idx < 0) {
+            missing.push(b);
+            skipped++;
+            continue;
+          }
+          products[idx].qty += q;
+          added++;
+        }
+        saveProducts();
+        let msg = "Đã cập nhật tồn: " + added + " dòng.";
+        if (missing.length)
+          msg += " Bỏ qua " + missing.length + " mã chưa có trong kho.";
+        showToast(msg);
+      }
+
+      function renderProducts() {
+        tbody.innerHTML = "";
+        emptyMsg.hidden = products.length > 0;
+
+        products
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name, "vi"))
+          .forEach((p) => {
+            const tr = document.createElement("tr");
+            tr.dataset.bc = p.barcode;
+            tr.innerHTML =
+              '<td class="mono">' +
+              escapeHtml(p.barcode) +
+              "</td>" +
+              "<td>" +
+              escapeHtml(p.name) +
+              "</td>" +
+              "<td>" +
+              formatMoney(p.price) +
+              "</td>" +
+              "<td>" +
+              p.qty +
+              "</td>" +
+              '<td><button type="button" class="btn-danger" data-del="' +
+              escapeAttr(p.barcode) +
+              '">Xóa</button></td>';
+            tbody.appendChild(tr);
+          });
+
+        tbody.querySelectorAll("[data-del]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const bc = btn.getAttribute("data-del");
+            products = products.filter((x) => x.barcode !== bc);
+            cart = cart.filter((x) => x.barcode !== bc);
+            saveProducts();
+            showToast("Đã xóa mã: " + bc);
+          });
+        });
+      }
+
+      function cartLineTotal(line) {
+        return line.price * line.qty;
+      }
+
+      function cartGrandTotal() {
+        return cart.reduce((s, l) => s + cartLineTotal(l), 0);
+      }
+
+      function renderCart() {
+        cartBody.innerHTML = "";
+        cart.forEach((line) => {
+          const tr = document.createElement("tr");
+          tr.dataset.bc = line.barcode;
+          tr.innerHTML =
+            '<td class="mono">' +
+            escapeHtml(line.barcode) +
+            "</td>" +
+            "<td>" +
+            escapeHtml(line.name) +
+            "</td>" +
+            "<td>" +
+            formatMoney(line.price) +
+            "</td>" +
+            "<td>" +
+            '<button type="button" class="btn-ghost btn-sm" data-cq="' +
+            escapeAttr(line.barcode) +
+            '" data-d="-1">-</button> ' +
+            line.qty +
+            ' <button type="button" class="btn-ghost btn-sm" data-cq="' +
+            escapeAttr(line.barcode) +
+            '" data-d="1">+</button></td>' +
+            "<td>" +
+            formatMoney(cartLineTotal(line)) +
+            "</td>" +
+            '<td><button type="button" class="btn-danger" data-cr="' +
+            escapeAttr(line.barcode) +
+            '">Xóa</button></td>';
+          cartBody.appendChild(tr);
+        });
+
+        cartBody.querySelectorAll("[data-cq]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const bc = btn.getAttribute("data-cq");
+            const delta = parseInt(btn.getAttribute("data-d"), 10);
+            const i = findCartIndex(bc);
+            if (i < 0) return;
+            const stock = findProduct(bc);
+            if (delta > 0 && stock && cart[i].qty + delta > stock.qty) {
+              showToast("Không đủ tồn kho");
+              return;
+            }
+            cart[i].qty += delta;
+            if (cart[i].qty <= 0) cart.splice(i, 1);
+            renderCart();
+            $("cartTotal").textContent = formatMoney(cartGrandTotal());
+          });
+        });
+
+        cartBody.querySelectorAll("[data-cr]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const bc = btn.getAttribute("data-cr");
+            cart = cart.filter((x) => x.barcode !== bc);
+            renderCart();
+            $("cartTotal").textContent = formatMoney(cartGrandTotal());
+          });
+        });
+
+        $("cartTotal").textContent = formatMoney(cartGrandTotal());
+      }
+
+      function addToCart(barcode, qtyAdd) {
+        const bc = normalizeBarcode(barcode);
+        const q = parseInt(qtyAdd, 10);
+        if (!bc || isNaN(q) || q <= 0) {
+          showToast("Mã hoặc số lượng không hợp lệ");
+          return;
+        }
+        const p = findProduct(bc);
+        if (!p) {
+          showToast("Chưa có mặt hàng này trong kho");
+          return;
+        }
+        const i = findCartIndex(bc);
+        const cur = i >= 0 ? cart[i].qty : 0;
+        if (cur + q > p.qty) {
+          showToast("Không đủ tồn (còn " + p.qty + ")");
+          return;
+        }
+        if (i >= 0) {
+          cart[i].qty += q;
+        } else {
+          cart.push({
+            barcode: p.barcode,
+            name: p.name,
+            price: p.price,
+            qty: q,
+          });
+        }
+        renderCart();
+        showToast("Đã thêm giỏ: " + p.name + " x" + q);
+      }
+
+      function applyScanProduct(barcode) {
+        const bc = normalizeBarcode(barcode);
+        if (!bc) return;
+
+        $("inpBarcode").value = bc;
+        const idx = findIndex(bc);
+        if (idx >= 0) {
+          $("inpName").value = products[idx].name;
+          $("inpPrice").value = products[idx].price;
+          $("inpQty").value = products[idx].qty;
+          highlightRow(bc);
+          showToast("Đã tìm thấy: " + products[idx].name);
+        } else {
+          $("inpName").value = "";
+          $("inpPrice").value = "";
+          $("inpQty").value = "1";
+          showToast("Mã mới — nhập tên và giá rồi bấm Lưu");
+        }
+        $("inpName").focus();
+      }
+
+      function onDecoded(text) {
+        const now = Date.now();
+        if (text === lastScan && now - lastScanAt < SCAN_DEBOUNCE_MS) return;
+        lastScan = text;
+        lastScanAt = now;
+
+        const mode = getScanMode();
+        if (mode === "invoice") {
+          const items = parseInvoicePayload(text);
+          if (items) {
+            applyInboundItems(items);
+          } else {
+            showToast("QR không phải hóa đơn nhập hợp lệ");
+          }
+          return;
+        }
+        if (mode === "cart") {
+          const inv = parseInvoicePayload(text);
+          if (inv) {
+            applyInboundItems(inv);
+            return;
+          }
+          addToCart(text, 1);
+          return;
+        }
+        const inv = parseInvoicePayload(text);
+        if (inv) {
+          applyInboundItems(inv);
+          return;
+        }
+        applyScanProduct(text);
+      }
+
+      async function startCamera() {
+        if (scanning) return;
+
+        if (typeof Html5Qrcode === "undefined") {
+          showToast("Không tải được thư viện quét. Kiểm tra mạng.");
+          return;
+        }
+
+        html5Qr = new Html5Qrcode("reader");
+        const config = {
+          fps: 10,
+          qrbox: { width: 280, height: 200 },
+          formatsToSupport: getFormatsForMode(),
+        };
+
+        const onOk = (decodedText) => onDecoded(decodedText);
+        const onErr = () => {};
+
+        try {
+          await html5Qr.start(
+            { facingMode: "environment" },
+            config,
+            onOk,
+            onErr
+          );
+        } catch (e1) {
+          try {
+            await html5Qr.start(
+              { facingMode: "user" },
+              config,
+              onOk,
+              onErr
+            );
+          } catch (e2) {
+            showToast("Không mở được camera: " + (e2.message || e1.message || "lỗi"));
+            html5Qr = null;
+            return;
+          }
+        }
+
+        scanning = true;
+        $("btnCam").disabled = true;
+        $("btnStop").disabled = false;
+        showToast("Camera đang bật");
+      }
+
+      async function stopCamera() {
+        if (!html5Qr || !scanning) return;
+        try {
+          await html5Qr.stop();
+          await html5Qr.clear();
+        } catch (_) {}
+        html5Qr = null;
+        scanning = false;
+        $("btnCam").disabled = false;
+        $("btnStop").disabled = true;
+      }
+
+      function upsertFromForm() {
+        const bc = normalizeBarcode($("inpBarcode").value);
+        const name = $("inpName").value.trim();
+        const price = parseInt($("inpPrice").value, 10);
+        const qty = parseInt($("inpQty").value, 10);
+
+        if (!bc) {
+          showToast("Nhập mã vạch");
+          return;
+        }
+        if (!name) {
+          showToast("Nhập tên hàng");
+          return;
+        }
+        if (isNaN(price) || price < 0) {
+          showToast("Giá không hợp lệ");
+          return;
+        }
+        if (isNaN(qty) || qty < 0) {
+          showToast("Số lượng không hợp lệ");
+          return;
+        }
+
+        const idx = findIndex(bc);
+        if (idx >= 0) {
+          products[idx] = { barcode: bc, name, price, qty };
+          showToast("Đã cập nhật: " + name);
+        } else {
+          products.push({ barcode: bc, name, price, qty });
+          showToast("Đã thêm: " + name);
+        }
+        saveProducts();
+        highlightRow(bc);
+      }
+
+      function checkout() {
+        if (!cart.length) {
+          showToast("Giỏ trống");
+          return;
+        }
+        for (const line of cart) {
+          const p = findProduct(line.barcode);
+          if (!p || p.qty < line.qty) {
+            showToast("Không đủ tồn cho: " + line.name);
+            return;
+          }
+        }
+        const id = "HD-" + Date.now().toString(36).toUpperCase();
+        const at = new Date();
+        const shop = $("inpShopName").value.trim() || "Hóa đơn bán lẻ";
+        const lines = cart.map((line) => ({
+          name: line.name,
+          qty: line.qty,
+          price: line.price,
+          lineTotal: cartLineTotal(line),
+        }));
+        const total = cartGrandTotal();
+        const salePayload = {
+          type: "banhang_sale",
+          id,
+          at: at.toISOString(),
+          shop,
+          items: cart.map((c) => ({
+            b: c.barcode,
+            n: c.name,
+            q: c.qty,
+            p: c.price,
+          })),
+          total,
+        };
+        const qrData = PREFIX_SALE + JSON.stringify(salePayload);
+
+        for (const line of cart) {
+          const idx = findIndex(line.barcode);
+          if (idx >= 0) products[idx].qty -= line.qty;
+        }
+        cart = [];
+        saveProducts();
+        lastSale = { id, at: at.toLocaleString("vi-VN"), shop, lines, total, qrData };
+        showToast("Thanh toán xong — bấm «In hóa đơn vừa bán» để in");
+        renderCart();
+      }
+
+      function buildPrintHtml(sale, qrDataUrl) {
+        const rows = sale.lines
+          .map(
+            (l) =>
+              "<tr><td>" +
+              escapeHtml(l.name) +
+              "</td><td>" +
+              l.qty +
+              "</td><td>" +
+              formatMoney(l.price) +
+              "</td><td>" +
+              formatMoney(l.lineTotal) +
+              "</td></tr>"
+          )
+          .join("");
+        const qrBlock = qrDataUrl
+          ? "<div class=\"qr-wrap\"><img src=\"" +
+            escapeAttr(qrDataUrl) +
+            "\" alt=\"QR\" width=\"120\" height=\"120\" /></div>"
+          : "<div class=\"qr-wrap\" style=\"font-size:10px;text-align:center\">QR tạo cục bộ không khả dụng</div>";
+        return (
+          "<div class=\"print-invoice\">" +
+          "<h3>" +
+          escapeHtml(sale.shop) +
+          "</h3>" +
+          "<div class=\"meta\">" +
+          escapeHtml(sale.id) +
+          "<br/>" +
+          escapeHtml(sale.at) +
+          "</div>" +
+          "<table><thead><tr><th>Hàng</th><th>SL</th><th>ĐG</th><th>T.Tiền</th></tr></thead><tbody>" +
+          rows +
+          "</tbody></table>" +
+          "<div class=\"sum\">Tổng: " +
+          formatMoney(sale.total) +
+          "</div>" +
+          qrBlock +
+          "<div class=\"foot\">Cảm ơn quý khách</div></div>"
+        );
+      }
+
+      function createLocalQrDataUrl(text) {
+        return new Promise((resolve) => {
+          const QR = typeof QRCode !== "undefined" ? QRCode : null;
+          if (!QR || typeof QR.toDataURL !== "function") {
+            resolve(null);
+            return;
+          }
+          const opts = {
+            width: 148,
+            margin: 1,
+            errorCorrectionLevel: "M",
+            color: { dark: "#000000", light: "#ffffff" },
+          };
+          const done = (err, url) => {
+            if (err || !url) resolve(null);
+            else resolve(url);
+          };
+          try {
+            const ret = QR.toDataURL(text, opts, done);
+            if (ret && typeof ret.then === "function") {
+              ret.then((url) => resolve(url || null)).catch(() => resolve(null));
+            }
+          } catch {
+            resolve(null);
+          }
+        });
+      }
+
+      function openPrintPreview() {
+        if (!lastSale) {
+          showToast("Chưa có hóa đơn để in");
+          return;
+        }
+        createLocalQrDataUrl(lastSale.qrData).then((qrDataUrl) => {
+          printHost.innerHTML = buildPrintHtml(lastSale, qrDataUrl);
+          printHost.style.left = "0";
+          if (!qrDataUrl) {
+            showToast("In hóa đơn (không có QR — thư viện chưa tải)");
+          }
+          setTimeout(() => {
+            window.print();
+            printHost.innerHTML = "";
+            printHost.style.left = "-9999px";
+          }, 200);
+        });
+      }
+
+      $("btnCam").addEventListener("click", startCamera);
+      $("btnStop").addEventListener("click", stopCamera);
+
+      $("btnAdd").addEventListener("click", upsertFromForm);
+
+      $("btnClearForm").addEventListener("click", () => {
+        $("inpBarcode").value = "";
+        $("inpName").value = "";
+        $("inpPrice").value = "";
+        $("inpQty").value = "1";
+      });
+
+      $("inpBarcode").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          if (getScanMode() === "cart") {
+            addToCart($("inpBarcode").value, $("inpQty").value || 1);
+          } else {
+            applyScanProduct($("inpBarcode").value);
+          }
+        }
+      });
+
+      $("inpShopName").addEventListener("change", saveSettings);
+      $("inpShopName").addEventListener("blur", saveSettings);
+
+      $("btnCartFromForm").addEventListener("click", () => {
+        addToCart($("inpBarcode").value, $("inpQty").value || 1);
+      });
+
+      $("btnCartClear").addEventListener("click", () => {
+        if (!cart.length) return;
+        if (confirm("Xóa toàn bộ giỏ hàng?")) {
+          cart = [];
+          renderCart();
+        }
+      });
+
+      $("btnCheckout").addEventListener("click", checkout);
+      $("btnPrintLast").addEventListener("click", () => openPrintPreview());
+
+      $("btnInvoiceApply").addEventListener("click", () => {
+        const fromTa = parseLinesFromTextarea($("taInvoice").value);
+        const fromQr = parseInvoicePayload($("taInvoice").value.trim());
+        const items = fromQr && fromQr.length ? fromQr : fromTa;
+        if (!items.length) {
+          showToast("Không đọc được dòng mã hoặc JSON hợp lệ");
+          return;
+        }
+        applyInboundItems(items);
+      });
+
+      $("btnInvoiceFile").addEventListener("click", () => $("fileInvoiceImport").click());
+
+      $("fileInvoiceImport").addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          const items = parseInvoicePayload(String(r.result).trim());
+          if (!items || !items.length) {
+            showToast("File không đúng định dạng hóa đơn nhập");
+            return;
+          }
+          applyInboundItems(items);
+        };
+        r.readAsText(f);
+      });
+
+      $("btnClearAll").addEventListener("click", () => {
+        if (!products.length) return;
+        if (confirm("Xóa toàn bộ " + products.length + " mặt hàng?")) {
+          products = [];
+          cart = [];
+          saveProducts();
+          showToast("Đã xóa danh sách");
+        }
+      });
+
+      $("btnExport").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(products, null, 2)], {
+          type: "application/json",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "hang-hoa-" + new Date().toISOString().slice(0, 10) + ".json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast("Đã tải file JSON kho");
+      });
+
+      $("btnExportInvoiceQr").addEventListener("click", () => {
+        const lines = parseLinesFromTextarea($("taInvoice").value);
+        if (!lines.length) {
+          showToast("Nhập dòng mã ở ô hóa đơn nhập trước khi xuất");
+          return;
+        }
+        const payload = {
+          type: "banhang_invoice",
+          v: 1,
+          created: new Date().toISOString(),
+          items: lines.map((x) => ({ b: x.b, q: x.q })),
+        };
+        const str = PREFIX_INV + JSON.stringify(payload);
+        const blob = new Blob([str], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "hoa-don-nhap-" + new Date().toISOString().slice(0, 10) + ".txt";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast("Đã tải file — nội dung là một dòng QR; in QR bằng công cụ ngoài hoặc quét từ màn hình");
+      });
+
+      $("btnImport").addEventListener("click", () => $("fileImport").click());
+
+      $("fileImport").addEventListener("change", (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!f) return;
+        const r = new FileReader();
+        r.onload = () => {
+          try {
+            const data = JSON.parse(String(r.result));
+            if (!Array.isArray(data)) throw new Error("not array");
+            const ok = data.every(
+              (x) =>
+                x &&
+                typeof x.barcode === "string" &&
+                typeof x.name === "string" &&
+                typeof x.price === "number" &&
+                typeof x.qty === "number"
+            );
+            if (!ok) throw new Error("invalid shape");
+            if (
+              !confirm(
+                "Thay thế danh sách hiện tại bằng " + data.length + " mặt hàng từ file?"
+              )
+            )
+              return;
+            products = data;
+            cart = [];
+            saveProducts();
+            showToast("Nhập dữ liệu thành công");
+          } catch {
+            showToast("File JSON không hợp lệ");
+          }
+        };
+        r.readAsText(f);
+      });
+
+      window.addEventListener("beforeunload", () => {
+        if (scanning && html5Qr) html5Qr.stop().catch(() => {});
+      });
+
+      loadSettings();
+      load();
+      renderProducts();
+      renderCart();
+    })();
+  </script>
+</body>
+</html>
