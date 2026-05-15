@@ -1,0 +1,9 @@
+git init
+
+git add .
+
+git commit -m "Initial commit - POS App"# Tạo một repository mới trên web GitHub và copy link
+
+git remote add origin github.com/inh008/Trang-ch-POS
+
+git push -u origin main
